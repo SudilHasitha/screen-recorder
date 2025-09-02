@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>ScreenCaptureMe — Local Screen + Mic Recorder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Record your screen + mic locally in the browser. No uploads." />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <h1>ScreenCaptureMe</h1>
+    <p class="tagline">Record your screen + mic <strong>locally</strong>. Nothing is uploaded.</p>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <h2>Recorder</h2>
+      <div class="grid">
+        <label class="field">Microphone
+          <select id="mic" aria-label="Microphone select"></select>
+        </label>
+
+        <label class="field">Frame rate
+          <select id="fps" aria-label="Frame rate">
+            <option>30</option>
+            <option selected>60</option>
+          </select>
+        </label>
+
+        <label class="field checkbox">
+          <input type="checkbox" id="sysAudio" checked />
+          <span>Capture system audio (if available)</span>
+        </label>
+
+        <label class="field checkbox">
+          <input type="checkbox" id="liveSave" />
+          <span>Save to file while recording (Chromium only)</span>
+        </label>
+
+        <label class="field">Video bitrate (kbps)
+          <input id="vBitrate" type="number" value="6000" min="500" max="30000" step="500" />
+        </label>
+
+        <label class="field">Audio bitrate (kbps)
+          <input id="aBitrate" type="number" value="192" min="64" max="512" step="32" />
+        </label>
+      </div>
+
+      <div class="actions">
+        <button id="start" class="btn primary">Start</button>
+        <button id="pause" class="btn" disabled>Pause</button>
+        <button id="resume" class="btn" disabled>Resume</button>
+        <button id="stop" class="btn danger" disabled>Stop</button>
+      </div>
+
+      <!-- Download section - more prominent -->
+      <div id="downloadSection" class="download-section" style="display:none;">
+        <div class="download-info">
+          <p id="downloadMsg" class="download-msg"></p>
+          <a id="download" class="btn download-btn"> Download Recording</a>
+        </div>
+      </div>
+
+      <div class="player">
+        <video id="preview" autoplay playsinline muted></video>
+      </div>
+
+      <p id="msg" class="muted" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="card">
+      <h2>Why this over OBS?</h2>
+      <ul class="benefits">
+        <li><strong>Privacy-first:</strong> recordings never leave your machine. No servers, no accounts.</li>
+        <li><strong>Zero install:</strong> runs in your browser on Linux/Windows/macOS. Great for locked-down machines.</li>
+        <li><strong>One-click start:</strong> no scene/source setup — use the browser's secure picker.</li>
+        <li><strong>System + Mic mix:</strong> combines tab/system audio with mic locally via Web Audio.</li>
+        <li><strong>Save while recording:</strong> on Chromium, stream straight to disk — safer for long sessions.</li>
+        <li><strong>Open format:</strong> WebM (VP8/VP9 + Opus) plays in modern players and browsers.</li>
+      </ul>
+    </section>
+    
+    <section class="card">
+        <h2>Limitations vs OBS</h2>
+        <ul class="muted">
+          <li>Advanced pipelines (filters/scenes/NDI/virtual cams/RTMP) are OBS territory.</li>
+          <li>Whole-screen system audio support varies by OS/compositor; tab audio is most reliable.</li>
+          <li>Outputs are WebM; MP4 requires local post-convert (e.g., ffmpeg or ffmpeg.wasm).</li>
+        </ul>
+    </section>
+
+    <section class="card">
+      <h2>Troubleshooting</h2>
+      <ul class="muted">
+        <li>If you don't see system audio, share a <strong>tab</strong> and check "Share tab audio".</li>
+        <li>Feature checks: <span id="featureReport"></span></li>
+        <li>Requires HTTPS for screen/mic and file access.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <nav>
+      <a href="tests/tests.html" target="_blank" rel="noopener">Run Tests</a>
+      <a href="https://privacy.local" onclick="return false;">Privacy: everything stays local</a>
+    </nav>
+  </footer>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

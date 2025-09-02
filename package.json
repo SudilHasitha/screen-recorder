@@ -1,0 +1,28 @@
+{
+  "name": "screen-recorder",
+  "version": "1.0.0",
+  "description": "Local screen and microphone recorder in the browser",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "start-https": "python3 serve_https.py"
+  },
+  "keywords": [
+    "screen-recorder",
+    "web-rtc",
+    "media-recorder",
+    "browser-recorder",
+    "privacy",
+    "local-recording"
+  ],
+  "author": "SudilHasitha",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SudilHasitha/screen-recorder.git"
+  },
+  "homepage": "https://sudilhasitha.github.io/screen-recorder",
+  "bugs": {
+    "url": "https://github.com/SudilHasitha/screen-recorder/issues"
+  }
+}
