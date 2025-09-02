@@ -13,7 +13,30 @@ A privacy-first screen and microphone recorder that runs entirely in your browse
 
 ## Live Demo
 
+### GitHub Pages (Public Repos)
 Visit the live demo: [https://sudilhasitha.github.io/screen-recorder](https://sudilhasitha.github.io/screen-recorder)
+
+### Netlify (Public & Private Repos)
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/SudilHasitha/screen-recorder)
+
+## Deployment Options
+
+### 🚀 Quick Deploy
+
+**For Private Repositories:**
+[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/SudilHasitha/screen-recorder)
+
+**For Public Repositories:**
+- GitHub Pages: Enable in repository settings
+- Netlify: Use the deploy button above
+
+### 📋 Manual Deployment
+
+1. **GitHub Pages**: Go to Settings → Pages → GitHub Actions
+2. **Netlify**: Connect your GitHub repository
+3. **Vercel**: Import your GitHub repository
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions.
 
 ## Local Development
 
@@ -30,98 +53,65 @@ git clone https://github.com/SudilHasitha/screen-recorder.git
 cd screen-recorder
 ```
 
-2. Start the development server:
+2. Start the local server:
 ```bash
 # HTTP (basic functionality)
 python3 -m http.server 8000
 
-# HTTPS (full functionality including live save)
+# HTTPS (full functionality - recommended)
 python3 serve_https.py
 ```
 
 3. Open your browser and navigate to:
    - HTTP: `http://localhost:8000`
-   - HTTPS: `https://127.0.0.1:8000` (accept the security warning)
-
-## Deployment to GitHub Pages
-
-### Automatic Deployment
-
-1. **Create a GitHub repository** and push your code:
-```bash
-git init
-git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/SudilHasitha/screen-recorder.git
-git push -u origin main
-```
-
-2. **Enable GitHub Pages**:
-   - Go to your repository → Settings → Pages
-   - Select "GitHub Actions" as the source
-   - The workflow will automatically deploy on every push to main
-
-3. **Your app will be available at**:
-   `https://sudilhasitha.github.io/screen-recorder`
-
-### Manual Deployment
-
-For future updates, simply push to the main branch:
-```bash
-git add .
-git commit -m "Update screen recorder"
-git push origin main
-```
+   - HTTPS: `https://127.0.0.1:8000`
 
 ## Browser Compatibility
 
-- ✅ Chrome/Chromium (recommended)
-- ✅ Firefox
-- ✅ Safari
-- ✅ Edge
+| Browser | Screen Recording | Microphone | File System API |
+|---------|-----------------|------------|-----------------|
+| Chrome | ✅ | ✅ | ✅ |
+| Edge | ✅ | ✅ | ✅ |
+| Firefox | ✅ | ✅ | ❌ |
+| Safari | ✅ | ✅ | ❌ |
 
-## Security Notes
+## Security Features
 
-- ✅ **No Server-Side Code**: All processing happens in the browser
-- ✅ **No Data Collection**: No analytics, tracking, or data transmission
-- ✅ **HTTPS Required**: GitHub Pages provides automatic SSL certificates
-- ✅ **Local Storage Only**: Recordings never leave your device
-- ✅ **Open Source**: All code is visible and auditable
+- �� **No Data Collection**: Zero tracking or analytics
+- 🛡️ **Local Processing**: All recording happens in your browser
+- 🔐 **HTTPS Required**: Secure context for sensitive APIs
+- 📋 **Open Source**: Fully auditable code
+- 🚫 **No External Requests**: No third-party dependencies
 
 ## Privacy Policy
 
 This application:
-- Does not collect any personal information
-- Does not transmit data to external servers
-- Stores recordings only locally on your device
-- Does not use cookies or tracking
-- Is completely open source and auditable
-
-## License
-
-MIT License - see LICENSE file for details.
+- ✅ Processes all data locally in your browser
+- ✅ Does not collect, store, or transmit any personal information
+- ✅ Does not use cookies or tracking
+- ✅ Does not require user accounts or registration
+- ✅ Does not connect to external servers
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Submit a pull request
+2. Create a feature branch: `git checkout -b feature-name`
+3. Commit your changes: `git commit -am 'Add feature'`
+4. Push to the branch: `git push origin feature-name`
+5. Submit a pull request
 
-## Troubleshooting
+## License
 
-### Microphone not detected
-- Ensure you're using HTTPS
-- Check browser permissions
-- Try refreshing the page
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Screen capture not working
-- Use HTTPS (required by browsers)
-- Ensure you have the latest browser version
-- Check if your browser supports `getDisplayMedia`
+## Support
 
-### File System Access not working
-- Only works in Chromium-based browsers (Chrome, Edge, Brave)
-- Requires HTTPS
-- Enable the File System Access API flag if needed
+- 📖 **Documentation**: Check [DEPLOYMENT.md](DEPLOYMENT.md) for deployment help
+- 🐛 **Issues**: Report bugs on [GitHub Issues](https://github.com/SudilHasitha/screen-recorder/issues)
+- 💡 **Feature Requests**: Suggest new features via GitHub Issues
+
+## Acknowledgments
+
+- Built with modern web APIs (MediaRecorder, getDisplayMedia, File System Access)
+- Inspired by privacy-first design principles
+- Thanks to the open-source community for the tools and libraries
