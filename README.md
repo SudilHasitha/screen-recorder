@@ -8,7 +8,7 @@ A privacy-first screen and microphone recorder that runs entirely in your browse
 - 🎤 **Microphone Recording**: Record audio from your microphone
 - 🔊 **System Audio**: Capture system audio when available
 - 💾 **Local Storage**: All recordings stay on your device
-- 📱 **Cross-Platform**: Works on Linux, Windows, macOS
+- 📱 **Cross-Platform**: Works on Linux, Windows, macOS, and Android Chrome (with screen-capture enabled)
 - 🔒 **Privacy-First**: No data leaves your machine
 
 ## Live Demo
@@ -72,8 +72,33 @@ python3 serve_https.py
 |---------|-----------------|------------|-----------------|
 | Chrome | ✅ | ✅ | ✅ |
 | Edge | ✅ | ✅ | ✅ |
-| Firefox | ✅ | ✅ | ❌ |
-| Safari | ✅ | ✅ | ❌ |
+| Firefox | ✅ | ✅ | ❌ (download / Share instead) |
+| Safari | ✅ | ✅ | ❌ (download instead) |
+| Chrome Android | ⚠️ Enable flags if `getDisplayMedia` is missing | ✅ | ✅ (Chrome 132+; otherwise browser storage / download) |
+| Safari iOS | ❌ | ✅ | ❌ |
+
+### Android Chrome: screen recording other apps
+
+Chrome on Android does not always expose `navigator.mediaDevices.getDisplayMedia`. If Start fails with **function not found**:
+
+1. Open this app in **Google Chrome** over **HTTPS** (not an in-app browser).
+2. Update Chrome, then visit:
+   - `chrome://flags/#user-media-screen-capturing` → **Enabled**
+   - `chrome://flags/#android-media-picker` → **Enabled** (if listed)
+3. Relaunch Chrome, tap **Start**, and pick a **screen or another app** in the Android prompt.
+
+System audio is not captured on Android; the microphone still works.
+
+### Enable File System Access (save while recording)
+
+The live-save checkbox uses `showSaveFilePicker` when the browser allows it.
+
+1. Load the app over **HTTPS** (required).
+2. **Chrome / Edge (desktop):** on by default. If missing, enable `chrome://flags/#file-system-access-api` (or `edge://flags/#file-system-access-api`) and relaunch.
+3. **Brave:** enable `brave://flags/#file-system-access-api` and relaunch.
+4. **Chrome Android 132+:** File System Access is supported. Update Chrome, or enable the same flag if the Save dialog is missing.
+
+If the Save dialog is unavailable, recordings still download (and can be **shared** on Android). Live save can use private browser storage as a fallback.
 
 ## Security Features
 

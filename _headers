@@ -1,0 +1,7 @@
+/*
+  Permissions-Policy: display-capture=(self), microphone=(self), fullscreen=(self)
+  Feature-Policy: display-capture 'self'; microphone 'self'; fullscreen 'self'
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+*/
