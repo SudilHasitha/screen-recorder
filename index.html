@@ -75,7 +75,7 @@
       <h2>Why this over OBS?</h2>
       <ul class="benefits">
         <li><strong>Privacy-first:</strong> recordings never leave your machine. No servers, no accounts.</li>
-        <li><strong>Zero install:</strong> runs in your browser on Linux/Windows/macOS/Android Chrome. Great for locked-down machines.</li>
+        <li><strong>Zero install:</strong> runs in your browser on Linux/Windows/macOS. Great for locked-down machines.</li>
         <li><strong>One-click start:</strong> no scene/source setup — use the browser's secure picker.</li>
         <li><strong>System + Mic mix:</strong> combines tab/system audio with mic locally via Web Audio.</li>
         <li><strong>Save while recording:</strong> on Chromium, stream straight to disk — safer for long sessions.</li>
@@ -88,7 +88,7 @@
         <ul class="muted">
           <li>Advanced pipelines (filters/scenes/NDI/virtual cams/RTMP) are OBS territory.</li>
           <li>Whole-screen system audio support varies by OS/compositor; tab audio is most reliable. Android Chrome cannot capture system audio.</li>
-          <li>Chrome on many phones still treats <code>getDisplayMedia</code> as experimental. Enable the two Chrome flags in Troubleshooting if Start reports it missing. iOS cannot capture the screen from a web page.</li>
+          <li>Chrome on phones does not expose <code>getDisplayMedia</code> to websites (even with chrome://flags). Use desktop Chrome. iOS cannot capture the screen from a web page.</li>
           <li>Outputs are WebM; MP4 requires local post-convert (e.g., ffmpeg or ffmpeg.wasm).</li>
         </ul>
     </section>
@@ -98,7 +98,7 @@
       <ul class="muted">
         <li>If you don't see system audio, share a <strong>tab</strong> and check "Share tab audio" (desktop). Android Chrome cannot capture system audio.</li>
         <li>Feature checks: <span id="featureReport"></span></li>
-        <li>Chrome on Android hides <code>getDisplayMedia</code> unless both flags are Enabled, then relaunch: <code>chrome://flags/#enable-experimental-web-platform-features</code> and <code>chrome://flags/#user-media-screen-capturing</code>.</li>
+        <li>Chrome on Android phones does not provide <code>getDisplayMedia</code> to web pages. Enabling User Media Screen Capturing does not add the function on phones; Chrome is rolling that out for desktop-class Android (tablets) only. Use desktop Chrome, or the system screen recorder.</li>
       </ul>
     </section>
 

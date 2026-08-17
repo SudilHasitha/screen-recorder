@@ -2,7 +2,7 @@ import { UI } from './ui/dom.js';
 import { populateMics } from './util/devices.js';
 import { formatFeatureReport, getFSStatus, getDisplayCaptureStatus } from './util/support.js';
 import { isAndroid } from './util/platform.js';
-import { captureDisplayMedia } from './capture/display.js';
+import { captureDisplayMedia, inspectDisplayCapture } from './capture/display.js';
 import { createAudioMixer } from './audio/mixer.js';
 import { maybeOpenWriter, closeWriter, fileFromHandle } from './file/save.js';
 import { createRecorder, combineTracks } from './recording/recorder.js';
@@ -31,7 +31,8 @@ const resetState = () => {
   UI.recordingState('idle');
 };
 
-function displayCaptureMissingMessage(status) {
+function displayCaptureMissingMessage(status, inspect) {
+  const typeOf = inspect?.typeOf || 'undefined';
   if (status.inAppBrowser) {
     return 'This in-app browser cannot capture the screen. Open this page in Chrome (menu → Open in Chrome).';
   }
@@ -39,9 +40,15 @@ function displayCaptureMissingMessage(status) {
     return 'iOS browsers do not support getDisplayMedia screen recording.';
   }
   if (status.android) {
-    return 'Chrome on this phone is hiding getDisplayMedia. Enable chrome://flags/#enable-experimental-web-platform-features and chrome://flags/#user-media-screen-capturing, relaunch, then tap Start again.';
+    return `Chrome on this phone has no getDisplayMedia (typeof ${typeOf}). Chrome flags do not expose it on phones — only desktop Chrome and some tablets. A website cannot add that API. Use desktop Chrome, or Android Settings → screen recorder.`;
   }
-  return 'getDisplayMedia is not available in this browser.';
+  return `getDisplayMedia is not available in this browser (typeof ${typeOf}).`;
+}
+
+function formatCaughtError(err) {
+  const name = err?.name || 'Error';
+  const message = err?.message || String(err);
+  return `${name}: ${message}`;
 }
 
 async function acquireMicrophone() {
@@ -210,19 +217,18 @@ async function start() {
     });
 
   } catch (err) {
+    const inspect = inspectDisplayCapture();
     let errorMsg = 'Failed to start: ';
-    if (err.code === 'DISPLAY_MEDIA_MISSING' || (err.name === 'TypeError' && /getDisplayMedia/i.test(String(err.message)))) {
-      errorMsg = displayCaptureMissingMessage(getDisplayCaptureStatus());
+    if (err.code === 'DISPLAY_MEDIA_MISSING') {
+      errorMsg = displayCaptureMissingMessage(getDisplayCaptureStatus(), inspect);
     } else if (err.name === 'NotAllowedError') {
       errorMsg += 'Permission denied. Allow screen (and microphone) access and try again.';
     } else if (err.name === 'NotFoundError') {
       errorMsg += 'No capture source found. On Android, pick a screen or app in the system prompt.';
-    } else if (err.name === 'NotSupportedError') {
-      errorMsg = displayCaptureMissingMessage(getDisplayCaptureStatus());
     } else if (err.name === 'InvalidStateError') {
       errorMsg += 'Screen capture must start from a tap on Start. Tap Start again and pick a screen or app.';
     } else {
-      errorMsg += err?.message || err;
+      errorMsg += formatCaughtError(err);
     }
 
     UI.setMsg(errorMsg);

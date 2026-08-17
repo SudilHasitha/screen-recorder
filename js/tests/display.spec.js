@@ -3,7 +3,8 @@ import {
   resolveGetDisplayMedia,
   supportsDisplayCapture,
   buildDisplayConstraintAttempts,
-  captureDisplayMedia
+  captureDisplayMedia,
+  inspectDisplayCapture
 } from '../capture/display.js';
 
 describe('capture/display', () => {
@@ -23,6 +24,13 @@ describe('capture/display', () => {
   it('resolveGetDisplayMedia returns null when missing', () => {
     expect(resolveGetDisplayMedia({})).to.equal(null);
     expect(supportsDisplayCapture({ mediaDevices: {} })).to.equal(false);
+  });
+
+  it('inspectDisplayCapture reports missing API', () => {
+    const info = inspectDisplayCapture({});
+    expect(info.hasDevices).to.equal(false);
+    expect(info.supported).to.equal(false);
+    expect(info.typeOf).to.equal('no-mediaDevices');
   });
 
   it('Android constraints stay loose and skip system audio', () => {

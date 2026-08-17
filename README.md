@@ -8,7 +8,7 @@ A privacy-first screen and microphone recorder that runs entirely in your browse
 - 🎤 **Microphone Recording**: Record audio from your microphone
 - 🔊 **System Audio**: Capture system audio when available
 - 💾 **Local Storage**: All recordings stay on your device
-- 📱 **Cross-Platform**: Works on Linux, Windows, macOS, and Android Chrome (with screen-capture enabled)
+- 📱 **Cross-Platform**: Works on Linux, Windows, macOS (Chrome on Android phones cannot capture other apps from a web page)
 - 🔒 **Privacy-First**: No data leaves your machine
 
 ## Live Demo
@@ -74,15 +74,10 @@ python3 serve_https.py
 | Edge | ✅ | ✅ | ✅ |
 | Firefox | ✅ | ✅ | ❌ (download / Share instead) |
 | Safari | ✅ | ✅ | ❌ (download instead) |
-| Chrome Android | ⚠️ Experimental (`getDisplayMedia` off by default) | ✅ | ✅ (Chrome 132+; otherwise browser storage / download) |
+| Chrome Android | ❌ Phones (API not exposed to web pages) | ✅ | ✅ (Chrome 132+; otherwise browser storage / download) |
 | Safari iOS | ❌ | ✅ | ❌ |
 
-Chrome on Android treats `getDisplayMedia` as **experimental**. HTTPS does not turn it on. In Chrome, set both to Enabled and relaunch:
-
-- `chrome://flags/#enable-experimental-web-platform-features`
-- `chrome://flags/#user-media-screen-capturing`
-
-Then tap Start and pick a screen or app. System audio is not captured on Android; the microphone still works.
+Chrome on **phones** does not expose `navigator.mediaDevices.getDisplayMedia` to websites. Enabling `chrome://flags/#user-media-screen-capturing` does not add the function on a phone; Chromium is shipping that for desktop-class Android (tablets), not as something a web app can polyfill. Use desktop Chrome, or Android’s built-in screen recorder. System audio is not captured on Android.
 
 ### Enable File System Access (save while recording)
 

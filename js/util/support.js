@@ -85,7 +85,7 @@ export function formatFeatureReport() {
     if (gdmStatus.inAppBrowser) {
       gdmDetails = ' (open in Chrome, not an in-app browser)';
     } else if (gdmStatus.android) {
-      gdmDetails = ' (experimental — enable Chrome flags in Troubleshooting)';
+      gdmDetails = ' (not shipped on Chrome phones)';
     } else if (gdmStatus.ios) {
       gdmDetails = ' (not supported on iOS)';
     } else {

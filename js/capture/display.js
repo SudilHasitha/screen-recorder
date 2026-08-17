@@ -2,6 +2,26 @@
  * Resolve getDisplayMedia from the current (or injected) navigator.
  * Chrome Android often omits the own-property; check the prototype too.
  */
+export function inspectDisplayCapture(nav = navigator) {
+  const devices = nav.mediaDevices || nav.mediaDevice || null;
+  let typeOf = 'no-mediaDevices';
+  let inChain = false;
+  if (devices) {
+    try {
+      typeOf = typeof devices.getDisplayMedia;
+      inChain = 'getDisplayMedia' in devices;
+    } catch (err) {
+      typeOf = `getter-threw:${err?.name || err}`;
+    }
+  }
+  return {
+    hasDevices: !!devices,
+    typeOf,
+    inChain,
+    supported: typeof resolveGetDisplayMedia(nav) === 'function'
+  };
+}
+
 export function resolveGetDisplayMedia(nav = navigator) {
   const devices = nav.mediaDevices || nav.mediaDevice || null;
   if (devices && typeof devices.getDisplayMedia === 'function') {
