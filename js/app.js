@@ -2,7 +2,7 @@ import { UI } from './ui/dom.js';
 import { populateMics } from './util/devices.js';
 import { formatFeatureReport, getFSStatus, getDisplayCaptureStatus } from './util/support.js';
 import { isAndroid } from './util/platform.js';
-import { captureDisplayMedia, supportsDisplayCapture } from './capture/display.js';
+import { captureDisplayMedia } from './capture/display.js';
 import { createAudioMixer } from './audio/mixer.js';
 import { maybeOpenWriter, closeWriter, fileFromHandle } from './file/save.js';
 import { createRecorder, combineTracks } from './recording/recorder.js';
@@ -32,19 +32,16 @@ const resetState = () => {
 };
 
 function displayCaptureMissingMessage(status) {
-  if (!status.isSecureContext) {
-    return 'Screen recording needs a secure page (HTTPS). Open this app over HTTPS and try again.';
-  }
   if (status.inAppBrowser) {
-    return 'This in-app browser cannot capture the screen. Open this page in Chrome (menu → Open in Chrome / browser).';
+    return 'This in-app browser cannot capture the screen. Open this page in Chrome (menu → Open in Chrome).';
   }
   if (status.ios) {
     return 'iOS browsers do not support getDisplayMedia screen recording.';
   }
   if (status.android) {
-    return 'getDisplayMedia is not available. In Chrome, enable screen capture (see the Android guide below), relaunch Chrome, then retry.';
+    return 'Chrome on this phone is hiding getDisplayMedia. Enable chrome://flags/#enable-experimental-web-platform-features and chrome://flags/#user-media-screen-capturing, relaunch, then tap Start again.';
   }
-  return 'navigator.mediaDevices.getDisplayMedia is not available in this browser.';
+  return 'getDisplayMedia is not available in this browser.';
 }
 
 async function acquireMicrophone() {
@@ -73,18 +70,12 @@ async function start() {
     UI.setMsg('Preparing…');
     UI.hideDownload();
 
-    const captureStatus = getDisplayCaptureStatus();
-    if (!supportsDisplayCapture() || !captureStatus.isSecureContext) {
-      UI.setMsg(displayCaptureMissingMessage(captureStatus));
-      UI.highlightGuide('android-guide');
-      UI.setBusy(false);
-      return;
-    }
-
     const android = isAndroid();
     const fr = parseInt(UI.fpsSel.value, 10) || (android ? 30 : 60);
 
-    // 1) Screen / window / tab / (Android) other apps via MediaProjection
+    // Call getDisplayMedia on this tap. Do not feature-detect-and-bail first:
+    // Chrome Android may only expose the method under a user gesture, and
+    // extra pre-checks were blocking the system picker entirely.
     displayStream = await captureDisplayMedia({
       frameRate: fr,
       systemAudio: !android && UI.sysAudio.checked,
@@ -220,20 +211,16 @@ async function start() {
 
   } catch (err) {
     let errorMsg = 'Failed to start: ';
-    if (err.code === 'DISPLAY_MEDIA_MISSING' || (err.name === 'TypeError' && /getDisplayMedia/i.test(err.message))) {
+    if (err.code === 'DISPLAY_MEDIA_MISSING' || (err.name === 'TypeError' && /getDisplayMedia/i.test(String(err.message)))) {
       errorMsg = displayCaptureMissingMessage(getDisplayCaptureStatus());
-      UI.highlightGuide('android-guide');
     } else if (err.name === 'NotAllowedError') {
       errorMsg += 'Permission denied. Allow screen (and microphone) access and try again.';
     } else if (err.name === 'NotFoundError') {
       errorMsg += 'No capture source found. On Android, pick a screen or app in the system prompt.';
     } else if (err.name === 'NotSupportedError') {
-      errorMsg += 'This feature is not supported in your browser. ' + displayCaptureMissingMessage(getDisplayCaptureStatus());
-      UI.highlightGuide('android-guide');
-    } else if (err.name === 'SecurityError') {
-      errorMsg += 'Security error. Use HTTPS (for local testing: https://127.0.0.1:8000).';
+      errorMsg = displayCaptureMissingMessage(getDisplayCaptureStatus());
     } else if (err.name === 'InvalidStateError') {
-      errorMsg += 'Screen capture must be started from a tap on Start. Try again, and on Android pick a screen or app.';
+      errorMsg += 'Screen capture must start from a tap on Start. Tap Start again and pick a screen or app.';
     } else {
       errorMsg += err?.message || err;
     }
@@ -284,8 +271,7 @@ function applyPlatformDefaults() {
     UI.fpsSel.value = '30';
   }
 
-  const captureStatus = getDisplayCaptureStatus();
-  UI.updateCaptureStatus(captureStatus);
+  UI.updateCaptureStatus(getDisplayCaptureStatus());
 }
 
 (async function init() {
@@ -300,10 +286,10 @@ function applyPlatformDefaults() {
 
   UI.updateLiveSaveStatus(getFSStatus());
 
-  document.querySelectorAll('a[href="#fs-guide"], a[href="#android-guide"]').forEach(a => {
+  document.querySelectorAll('a[href="#setup-guides"]').forEach(a => {
     a.addEventListener('click', (e) => {
       e.preventDefault();
-      UI.highlightGuide(a.getAttribute('href').slice(1));
+      UI.highlightGuide('setup-guides');
     });
   });
 

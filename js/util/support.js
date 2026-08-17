@@ -76,24 +76,16 @@ export function formatFeatureReport() {
   const gdm = gdmStatus.hasAPI ? '✅ getDisplayMedia' : '❌ getDisplayMedia';
 
   let fsDetails = '';
-  if (!fsStatus.picker) {
-    if (!fsStatus.hasAPI) {
-      fsDetails = ' (API not available — see guide below)';
-    } else if (!fsStatus.isSecure) {
-      fsDetails = ' (requires HTTPS)';
-    } else if (!fsStatus.isSecureContext) {
-      fsDetails = ' (not secure context)';
-    }
+  if (!fsStatus.picker && !fsStatus.hasAPI) {
+    fsDetails = ' (enable in chrome://flags — see below)';
   }
 
   let gdmDetails = '';
   if (!gdmStatus.hasAPI) {
-    if (!gdmStatus.isSecureContext) {
-      gdmDetails = ' (requires HTTPS)';
-    } else if (gdmStatus.inAppBrowser) {
+    if (gdmStatus.inAppBrowser) {
       gdmDetails = ' (open in Chrome, not an in-app browser)';
     } else if (gdmStatus.android) {
-      gdmDetails = ' (enable screen capture in Chrome — see guide)';
+      gdmDetails = ' (experimental — enable Chrome flags in Troubleshooting)';
     } else if (gdmStatus.ios) {
       gdmDetails = ' (not supported on iOS)';
     } else {

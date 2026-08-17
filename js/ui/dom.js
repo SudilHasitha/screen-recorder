@@ -84,7 +84,9 @@ export const UI = {
   updateCaptureStatus(status) {
     if (!this.captureBanner) return;
 
-    if (status.supported) {
+    // Already on HTTPS in production. Do not nag about it. Only warn when
+    // capture cannot run at all (in-app browser / iOS).
+    if (status.supported || (status.android && !status.inAppBrowser)) {
       this.captureBanner.hidden = true;
       this.startBtn.disabled = false;
       return;
@@ -93,16 +95,14 @@ export const UI = {
     this.captureBanner.hidden = false;
     this.startBtn.disabled = false;
 
-    if (!status.isSecureContext) {
-      this.captureBanner.textContent = 'Screen recording requires HTTPS. Reload this page over https:// and try again.';
-    } else if (status.inAppBrowser) {
+    if (status.inAppBrowser) {
       this.captureBanner.textContent = 'In-app browsers cannot capture the screen. Open this page in Chrome.';
     } else if (status.ios) {
-      this.captureBanner.textContent = 'iOS does not support web screen recording (getDisplayMedia is missing).';
-    } else if (status.android) {
-      this.captureBanner.textContent = 'getDisplayMedia is not available yet. Enable screen capture in Chrome using the Android guide below, then relaunch Chrome.';
-    } else {
+      this.captureBanner.textContent = 'iOS does not support web screen recording.';
+    } else if (!status.hasAPI) {
       this.captureBanner.textContent = 'getDisplayMedia is not available in this browser. Use Chrome, Edge, Firefox, or Safari on desktop.';
+    } else {
+      this.captureBanner.hidden = true;
     }
   },
 
@@ -146,7 +146,7 @@ export const UI = {
     const helpMsg = document.createElement('div');
     helpMsg.className = 'fs-help';
     const link = document.createElement('a');
-    link.href = '#fs-guide';
+    link.href = '#setup-guides';
     link.textContent = 'How to enable File System Access';
     helpMsg.appendChild(document.createTextNode(`${reason} `));
     helpMsg.appendChild(link);

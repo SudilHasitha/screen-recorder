@@ -32,8 +32,8 @@ describe('capture/display', () => {
       android: true
     });
     expect(attempts[0].video).to.equal(true);
-    expect(attempts[0].audio).to.equal(false);
-    expect(attempts[0].monitorTypeSurfaces).to.equal('include');
+    expect(attempts[0].audio).to.equal(undefined);
+    expect(Object.keys(attempts[0])).to.deep.equal(['video']);
   });
 
   it('desktop constraints can request system audio', () => {

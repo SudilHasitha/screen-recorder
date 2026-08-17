@@ -1,15 +1,24 @@
-import { isAndroid } from '../util/platform.js';
-
 /**
  * Resolve getDisplayMedia from the current (or injected) navigator.
- * Android Chrome historically omitted the method; some engines expose it
- * on navigator instead of mediaDevices.
+ * Chrome Android often omits the own-property; check the prototype too.
  */
 export function resolveGetDisplayMedia(nav = navigator) {
   const devices = nav.mediaDevices || nav.mediaDevice || null;
   if (devices && typeof devices.getDisplayMedia === 'function') {
     return devices.getDisplayMedia.bind(devices);
   }
+
+  const proto = typeof MediaDevices !== 'undefined' ? MediaDevices.prototype : null;
+  if (
+    devices &&
+    proto &&
+    typeof MediaDevices === 'function' &&
+    devices instanceof MediaDevices &&
+    typeof proto.getDisplayMedia === 'function'
+  ) {
+    return proto.getDisplayMedia.bind(devices);
+  }
+
   if (typeof nav.getDisplayMedia === 'function') {
     return nav.getDisplayMedia.bind(nav);
   }
@@ -27,19 +36,12 @@ export function buildDisplayConstraintAttempts({ frameRate = 30, systemAudio = f
   const fr = Number(frameRate) || 30;
 
   if (android) {
-    // Android MediaProjection is picky: exact frameRate / system audio often
-    // reject the whole getDisplayMedia() call. Keep constraints loose and
-    // include other apps/screens when the picker supports it.
+    // Extra options (monitorTypeSurfaces, preferCurrentTab, audio) can throw
+    // TypeError on Chrome Android even when getDisplayMedia exists. Start
+    // with the spec minimum so the system picker can appear.
     return [
-      {
-        video: true,
-        audio: false,
-        preferCurrentTab: false,
-        selfBrowserSurface: 'include',
-        monitorTypeSurfaces: 'include'
-      },
-      { video: true, audio: false },
-      { video: true }
+      { video: true },
+      { video: true, audio: false }
     ];
   }
 
@@ -60,10 +62,10 @@ export function buildDisplayConstraintAttempts({ frameRate = 30, systemAudio = f
   ];
 }
 
-export async function captureDisplayMedia({ frameRate, systemAudio, android = isAndroid() } = {}, nav = navigator) {
+export async function captureDisplayMedia({ frameRate, systemAudio, android = false } = {}, nav = navigator) {
   const getDisplayMedia = resolveGetDisplayMedia(nav);
   if (!getDisplayMedia) {
-    const err = new Error('navigator.mediaDevices.getDisplayMedia is not available in this browser');
+    const err = new Error('getDisplayMedia is not available');
     err.name = 'NotSupportedError';
     err.code = 'DISPLAY_MEDIA_MISSING';
     throw err;
@@ -77,7 +79,6 @@ export async function captureDisplayMedia({ frameRate, systemAudio, android = is
       return await getDisplayMedia(constraints);
     } catch (err) {
       lastErr = err;
-      // User cancelled or denied — don't retry with other constraints.
       if (err?.name === 'NotAllowedError' || err?.name === 'AbortError') {
         throw err;
       }

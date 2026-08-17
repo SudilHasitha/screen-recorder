@@ -5,7 +5,6 @@
   <title>ScreenCaptureMe — Local Screen + Mic Recorder</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="description" content="Record your screen + mic locally in the browser. No uploads." />
-  <meta http-equiv="Permissions-Policy" content="display-capture=(self), microphone=(self), fullscreen=(self)" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -89,7 +88,7 @@
         <ul class="muted">
           <li>Advanced pipelines (filters/scenes/NDI/virtual cams/RTMP) are OBS territory.</li>
           <li>Whole-screen system audio support varies by OS/compositor; tab audio is most reliable. Android Chrome cannot capture system audio.</li>
-          <li>Android Chrome may omit <code>getDisplayMedia</code> until screen capture is enabled (see the setup guide). iOS cannot capture the screen from a web page.</li>
+          <li>Chrome on many phones still treats <code>getDisplayMedia</code> as experimental. Enable the two Chrome flags in Troubleshooting if Start reports it missing. iOS cannot capture the screen from a web page.</li>
           <li>Outputs are WebM; MP4 requires local post-convert (e.g., ffmpeg or ffmpeg.wasm).</li>
         </ul>
     </section>
@@ -99,44 +98,19 @@
       <ul class="muted">
         <li>If you don't see system audio, share a <strong>tab</strong> and check "Share tab audio" (desktop). Android Chrome cannot capture system audio.</li>
         <li>Feature checks: <span id="featureReport"></span></li>
-        <li>Requires HTTPS for screen/mic and file access.</li>
+        <li>Chrome on Android hides <code>getDisplayMedia</code> unless both flags are Enabled, then relaunch: <code>chrome://flags/#enable-experimental-web-platform-features</code> and <code>chrome://flags/#user-media-screen-capturing</code>.</li>
       </ul>
     </section>
 
     <section class="card" id="setup-guides">
-      <h2>Setup guides</h2>
-
-      <details id="android-guide" class="guide">
-        <summary>Record Android apps in Chrome (getDisplayMedia)</summary>
-        <ol class="guide-steps">
-          <li>Use <strong>Google Chrome</strong> (not Samsung Internet, Firefox, or an in-app browser such as Instagram / Gmail).</li>
-          <li>Open this page over <strong>HTTPS</strong>. <code>getDisplayMedia</code> is missing on plain HTTP.</li>
-          <li>Update Chrome from the Play Store, then relaunch it.</li>
-          <li>If Start still says <code>getDisplayMedia</code> is not found, enable capture flags:
-            <ul>
-              <li>Open <code>chrome://flags/#user-media-screen-capturing</code> and set <strong>User Media Screen Capturing</strong> to Enabled.</li>
-              <li>Open <code>chrome://flags/#android-media-picker</code> and set <strong>Android Media Picker</strong> to Enabled if the flag exists.</li>
-              <li>Tap <strong>Relaunch</strong>.</li>
-            </ul>
-          </li>
-          <li>Tap <strong>Start</strong>, then in the Android prompt choose <strong>a screen or another app</strong> (not only a Chrome tab). Allow the system screen-capture permission.</li>
-          <li>Keep Chrome in the background while you use the app you want recorded. Stop from the notification or return here and tap Stop.</li>
-        </ol>
-        <p class="muted">Chrome on phones may still hide <code>getDisplayMedia</code> until those flags are on. Tablets / desktop-class Android often already have it. iOS cannot capture the screen from a web page.</p>
-      </details>
-
-      <details id="fs-guide" class="guide">
-        <summary>Enable File System Access (save-to-disk while recording)</summary>
-        <p>The Save dialog (<code>showSaveFilePicker</code>) lets Chrome write the recording straight to a file you choose. If it is off, this app falls back to browser storage or a download.</p>
-        <ol class="guide-steps">
-          <li>Use <strong>HTTPS</strong> (or localhost). The API is blocked on insecure pages.</li>
-          <li><strong>Chrome / Edge (desktop):</strong> it is on by default. If missing, open <code>chrome://flags/#file-system-access-api</code> (or <code>edge://flags/#file-system-access-api</code>), enable it, and relaunch.</li>
-          <li><strong>Brave:</strong> open <code>brave://flags/#file-system-access-api</code>, enable <strong>File System Access API</strong>, and relaunch Brave.</li>
-          <li><strong>Chrome on Android (132+):</strong> File System Access is available. Update Chrome if the live-save checkbox stays disabled. If the Save dialog still does not appear, enable <code>chrome://flags/#file-system-access-api</code> and relaunch.</li>
-          <li>Reload this page and check the feature line above for <strong>File System Access</strong>.</li>
-        </ol>
-        <p class="muted">Firefox and Safari do not implement the Save dialog. On those browsers, record to memory and use Download (or Share on Android).</p>
-      </details>
+      <h2>Enable File System Access</h2>
+      <p class="muted">This site is already served over HTTPS. If live-save is disabled, turn on the Save dialog in the browser:</p>
+      <ol class="guide-steps">
+        <li><strong>Chrome / Edge:</strong> <code>chrome://flags/#file-system-access-api</code> or <code>edge://flags/#file-system-access-api</code> → Enabled → relaunch.</li>
+        <li><strong>Brave:</strong> <code>brave://flags/#file-system-access-api</code> → Enabled → relaunch.</li>
+        <li>Reload this page. The feature line above should show File System Access.</li>
+      </ol>
+      <p class="muted">Firefox and Safari have no Save dialog — use Download (or Share on Android). If the picker is still off, live save uses private browser storage instead.</p>
     </section>
   </main>
 
