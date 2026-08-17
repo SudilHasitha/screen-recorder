@@ -27,6 +27,11 @@
     --success: #16a34a;
     --success-2: #15803d;
   }
+  .banner {
+    background: #fff4e5;
+    border-color: #f0c48a;
+    color: #7a3e00;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -119,6 +124,57 @@ select:focus, input[type="number"]:focus {
   align-items: center;
   gap: 0.8rem;
 }
+
+.banner {
+  margin: 0 0 1rem;
+  padding: 0.75rem 0.9rem;
+  background: #2b1a0f;
+  border: 1px solid #5b3a22;
+  color: #ffd7b0;
+  border-radius: 10px;
+}
+
+.guide {
+  margin: 0.6rem 0 0;
+  padding: 0.75rem 0.9rem;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.guide + .guide { margin-top: 0.75rem; }
+
+.guide summary {
+  font-weight: 600;
+}
+
+.guide-steps {
+  margin: 0.75rem 0 0.5rem 1.1rem;
+  color: var(--muted);
+}
+
+.guide-steps li { margin: 0.35rem 0; }
+.guide-steps code, .muted code {
+  font-size: 0.9em;
+  word-break: break-all;
+}
+
+.guide-highlight {
+  outline: 2px solid var(--primary);
+  box-shadow: 0 0 0 4px var(--ring);
+}
+
+.fs-help {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: var(--panel-2);
+  border-radius: 8px;
+  border-left: 3px solid var(--primary);
+}
+
+.fs-help a { color: var(--primary); }
 
 .download-msg {
   margin: 0;

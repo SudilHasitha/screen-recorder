@@ -8,7 +8,7 @@ A privacy-first screen and microphone recorder that runs entirely in your browse
 - 🎤 **Microphone Recording**: Record audio from your microphone
 - 🔊 **System Audio**: Capture system audio when available
 - 💾 **Local Storage**: All recordings stay on your device
-- 📱 **Cross-Platform**: Works on Linux, Windows, macOS
+- 📱 **Cross-Platform**: Works on Linux, Windows, macOS (Chrome on Android phones cannot capture other apps from a web page)
 - 🔒 **Privacy-First**: No data leaves your machine
 
 ## Live Demo
@@ -72,8 +72,22 @@ python3 serve_https.py
 |---------|-----------------|------------|-----------------|
 | Chrome | ✅ | ✅ | ✅ |
 | Edge | ✅ | ✅ | ✅ |
-| Firefox | ✅ | ✅ | ❌ |
-| Safari | ✅ | ✅ | ❌ |
+| Firefox | ✅ | ✅ | ❌ (download / Share instead) |
+| Safari | ✅ | ✅ | ❌ (download instead) |
+| Chrome Android | ❌ Phones (API not exposed to web pages) | ✅ | ✅ (Chrome 132+; otherwise browser storage / download) |
+| Safari iOS | ❌ | ✅ | ❌ |
+
+Chrome on **phones** does not expose `navigator.mediaDevices.getDisplayMedia` to websites. Enabling `chrome://flags/#user-media-screen-capturing` does not add the function on a phone; Chromium is shipping that for desktop-class Android (tablets), not as something a web app can polyfill. Use desktop Chrome, or Android’s built-in screen recorder. System audio is not captured on Android.
+
+### Enable File System Access (save while recording)
+
+This app is served over HTTPS. The live-save checkbox uses `showSaveFilePicker` when the browser allows it.
+
+1. **Chrome / Edge:** enable `chrome://flags/#file-system-access-api` (or `edge://flags/#file-system-access-api`) if the Save dialog is missing, then relaunch.
+2. **Brave:** enable `brave://flags/#file-system-access-api` and relaunch.
+3. **Chrome Android 132+:** File System Access is supported. Update Chrome, or enable the same flag if the Save dialog is missing.
+
+If the Save dialog is unavailable, recordings still download (and can be **shared** on Android). Live save can use private browser storage as a fallback.
 
 ## Security Features
 

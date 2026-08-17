@@ -14,11 +14,14 @@ export const UI = {
   resumeBtn: el('resume'),
   stopBtn: el('stop'),
   downloadA: el('download'),
+  shareBtn: el('share'),
   downloadSection: el('downloadSection'),
   downloadMsg: el('downloadMsg'),
   preview: el('preview'),
   msg: el('msg'),
   featureReport: el('featureReport'),
+  captureBanner: el('captureBanner'),
+  downloadBlob: null,
 
   setMsg(text) {
     this.msg.textContent = text || '';
@@ -26,7 +29,6 @@ export const UI = {
 
   setBusy(isBusy) {
     this.startBtn.disabled = isBusy;
-    // Only hide download section if we're starting a new recording (not when finishing one)
     if (isBusy) {
       this.downloadSection.style.display = 'none';
     }
@@ -43,19 +45,21 @@ export const UI = {
     }
   },
 
-  showDownload(url, filename, fileSize) {
+  showDownload(url, filename, fileSize, blob) {
     this.downloadA.href = url;
     this.downloadA.download = filename;
     this.downloadA.textContent = ' Download Recording';
-    
-    // Set the download message with file size
+    this.downloadBlob = blob || null;
+
     const sizeText = fileSize ? ` (${fileSize})` : '';
     this.downloadMsg.textContent = `Recording ready for download${sizeText}`;
-    
-    // Show the download section
     this.downloadSection.style.display = 'block';
-    
-    // Scroll to download section
+
+    const canShare = !!(blob && typeof navigator.share === 'function');
+    if (this.shareBtn) {
+      this.shareBtn.style.display = canShare ? 'inline-block' : 'none';
+    }
+
     this.downloadSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
   },
 
@@ -65,79 +69,87 @@ export const UI = {
     this.downloadA.download = '';
     this.downloadA.textContent = '';
     this.downloadMsg.textContent = '';
+    this.downloadBlob = null;
+    if (this.shareBtn) this.shareBtn.style.display = 'none';
+  },
+
+  highlightGuide(id) {
+    const node = el(id);
+    if (!node) return;
+    node.classList.add('guide-highlight');
+    if (node.tagName === 'DETAILS') node.open = true;
+    node.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  },
+
+  updateCaptureStatus(status) {
+    if (!this.captureBanner) return;
+
+    // Already on HTTPS in production. Do not nag about it. Only warn when
+    // capture cannot run at all (in-app browser / iOS).
+    if (status.supported || (status.android && !status.inAppBrowser)) {
+      this.captureBanner.hidden = true;
+      this.startBtn.disabled = false;
+      return;
+    }
+
+    this.captureBanner.hidden = false;
+    this.startBtn.disabled = false;
+
+    if (status.inAppBrowser) {
+      this.captureBanner.textContent = 'In-app browsers cannot capture the screen. Open this page in Chrome.';
+    } else if (status.ios) {
+      this.captureBanner.textContent = 'iOS does not support web screen recording.';
+    } else if (!status.hasAPI) {
+      this.captureBanner.textContent = 'getDisplayMedia is not available in this browser. Use Chrome, Edge, Firefox, or Safari on desktop.';
+    } else {
+      this.captureBanner.hidden = true;
+    }
   },
 
   updateLiveSaveStatus(fsStatus) {
     const liveSaveLabel = this.liveSave.parentElement;
     const checkbox = this.liveSave;
-    
-    if (fsStatus.supported) {
+    const existingHelp = liveSaveLabel.querySelector('.fs-help');
+    if (existingHelp) existingHelp.remove();
+
+    if (fsStatus.picker) {
       liveSaveLabel.style.opacity = '1';
       checkbox.disabled = false;
-      liveSaveLabel.title = 'Save recording directly to file while recording (requires Chromium-based browser)';
-    } else {
-      liveSaveLabel.style.opacity = '0.5';
-      checkbox.disabled = true;
-      
-      let reason = '';
-      if (!fsStatus.hasAPI) {
-        reason = 'File System Access API not available. Try Chrome or Edge.';
-      } else if (!fsStatus.isSecure) {
-        reason = 'File System Access requires HTTPS. Try accessing via https://localhost:8000';
-      } else if (!fsStatus.isSecureContext) {
-        reason = 'Not in a secure context.';
-      }
-      
-      liveSaveLabel.title = `Live save disabled: ${reason}`;
-      
-      // Add a help message using safe DOM methods
+      liveSaveLabel.title = 'Save recording directly to a file you choose (Chromium File System Access).';
+      return;
+    }
+
+    if (fsStatus.opfs) {
+      liveSaveLabel.style.opacity = '1';
+      checkbox.disabled = false;
+      liveSaveLabel.title = 'Save chunks to private browser storage while recording, then download or share.';
       const helpMsg = document.createElement('div');
       helpMsg.className = 'fs-help';
-      helpMsg.style.cssText = 'font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; padding: 0.5rem; background: var(--panel-2); border-radius: 8px; border-left: 3px solid var(--primary);';
-      
-      const strong = document.createElement('strong');
-      strong.textContent = 'To enable live save in Brave:';
-      helpMsg.appendChild(strong);
-      
-      const br1 = document.createElement('br');
-      helpMsg.appendChild(br1);
-      
-      const text1 = document.createTextNode('1. Go to ');
-      helpMsg.appendChild(text1);
-      
-      const code1 = document.createElement('code');
-      code1.textContent = 'brave://flags/#file-system-access-api';
-      helpMsg.appendChild(code1);
-      
-      const br2 = document.createElement('br');
-      helpMsg.appendChild(br2);
-      
-      const text2 = document.createTextNode('2. Enable "File System Access API"');
-      helpMsg.appendChild(text2);
-      
-      const br3 = document.createElement('br');
-      helpMsg.appendChild(br3);
-      
-      const text3 = document.createTextNode('3. Restart Brave');
-      helpMsg.appendChild(text3);
-      
-      const br4 = document.createElement('br');
-      helpMsg.appendChild(br4);
-      
-      const text4 = document.createTextNode('4. Access this page via ');
-      helpMsg.appendChild(text4);
-      
-      const code2 = document.createElement('code');
-      code2.textContent = 'https://localhost:8000';
-      helpMsg.appendChild(code2);
-      
-      // Remove existing help message if any
-      const existingHelp = liveSaveLabel.querySelector('.fs-help');
-      if (existingHelp) {
-        existingHelp.remove();
-      }
-      
+      helpMsg.textContent = 'Live save will use browser storage (File System Access picker is off). See the guide below to enable a real Save dialog.';
       liveSaveLabel.appendChild(helpMsg);
+      return;
     }
+
+    liveSaveLabel.style.opacity = '0.5';
+    checkbox.disabled = true;
+
+    let reason = 'File System Access is not available.';
+    if (!fsStatus.hasAPI && !fsStatus.hasOPFS) {
+      reason = 'File System Access API not available. See the enable guide below.';
+    } else if (!fsStatus.isSecure) {
+      reason = 'File System Access requires HTTPS.';
+    } else if (!fsStatus.isSecureContext) {
+      reason = 'Not in a secure context.';
+    }
+    liveSaveLabel.title = `Live save disabled: ${reason}`;
+
+    const helpMsg = document.createElement('div');
+    helpMsg.className = 'fs-help';
+    const link = document.createElement('a');
+    link.href = '#setup-guides';
+    link.textContent = 'How to enable File System Access';
+    helpMsg.appendChild(document.createTextNode(`${reason} `));
+    helpMsg.appendChild(link);
+    liveSaveLabel.appendChild(helpMsg);
   }
 };

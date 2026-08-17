@@ -16,6 +16,7 @@
   <main class="container">
     <section class="card">
       <h2>Recorder</h2>
+      <p id="captureBanner" class="banner" hidden></p>
       <div class="grid">
         <label class="field">Microphone
           <select id="mic" aria-label="Microphone select"></select>
@@ -35,7 +36,7 @@
 
         <label class="field checkbox">
           <input type="checkbox" id="liveSave" />
-          <span>Save to file while recording (Chromium only)</span>
+          <span>Save to file while recording</span>
         </label>
 
         <label class="field">Video bitrate (kbps)
@@ -59,6 +60,7 @@
         <div class="download-info">
           <p id="downloadMsg" class="download-msg"></p>
           <a id="download" class="btn download-btn"> Download Recording</a>
+          <button type="button" id="share" class="btn" style="display:none;">Share</button>
         </div>
       </div>
 
@@ -85,7 +87,8 @@
         <h2>Limitations vs OBS</h2>
         <ul class="muted">
           <li>Advanced pipelines (filters/scenes/NDI/virtual cams/RTMP) are OBS territory.</li>
-          <li>Whole-screen system audio support varies by OS/compositor; tab audio is most reliable.</li>
+          <li>Whole-screen system audio support varies by OS/compositor; tab audio is most reliable. Android Chrome cannot capture system audio.</li>
+          <li>Chrome on phones does not expose <code>getDisplayMedia</code> to websites (even with chrome://flags). Use desktop Chrome. iOS cannot capture the screen from a web page.</li>
           <li>Outputs are WebM; MP4 requires local post-convert (e.g., ffmpeg or ffmpeg.wasm).</li>
         </ul>
     </section>
@@ -93,16 +96,27 @@
     <section class="card">
       <h2>Troubleshooting</h2>
       <ul class="muted">
-        <li>If you don't see system audio, share a <strong>tab</strong> and check "Share tab audio".</li>
+        <li>If you don't see system audio, share a <strong>tab</strong> and check "Share tab audio" (desktop). Android Chrome cannot capture system audio.</li>
         <li>Feature checks: <span id="featureReport"></span></li>
-        <li>Requires HTTPS for screen/mic and file access.</li>
+        <li>Chrome on Android phones does not provide <code>getDisplayMedia</code> to web pages. Enabling User Media Screen Capturing does not add the function on phones; Chrome is rolling that out for desktop-class Android (tablets) only. Use desktop Chrome, or the system screen recorder.</li>
       </ul>
+    </section>
+
+    <section class="card" id="setup-guides">
+      <h2>Enable File System Access</h2>
+      <p class="muted">This site is already served over HTTPS. If live-save is disabled, turn on the Save dialog in the browser:</p>
+      <ol class="guide-steps">
+        <li><strong>Chrome / Edge:</strong> <code>chrome://flags/#file-system-access-api</code> or <code>edge://flags/#file-system-access-api</code> → Enabled → relaunch.</li>
+        <li><strong>Brave:</strong> <code>brave://flags/#file-system-access-api</code> → Enabled → relaunch.</li>
+        <li>Reload this page. The feature line above should show File System Access.</li>
+      </ol>
+      <p class="muted">Firefox and Safari have no Save dialog — use Download (or Share on Android). If the picker is still off, live save uses private browser storage instead.</p>
     </section>
   </main>
 
   <footer class="site-footer">
     <nav>
-      <a href="tests/tests.html" target="_blank" rel="noopener">Run Tests</a>
+      <a href="js/tests/tests.html" target="_blank" rel="noopener">Run Tests</a>
       <a href="https://privacy.local" onclick="return false;">Privacy: everything stays local</a>
     </nav>
   </footer>

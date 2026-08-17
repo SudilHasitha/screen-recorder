@@ -1,13 +1,17 @@
 import { UI } from './ui/dom.js';
 import { populateMics } from './util/devices.js';
-import { formatFeatureReport, getFSStatus } from './util/support.js';
+import { formatFeatureReport, getFSStatus, getDisplayCaptureStatus } from './util/support.js';
+import { isAndroid } from './util/platform.js';
+import { captureDisplayMedia, inspectDisplayCapture } from './capture/display.js';
 import { createAudioMixer } from './audio/mixer.js';
-import { maybeOpenWriter, closeWriter } from './file/save.js';
+import { maybeOpenWriter, closeWriter, fileFromHandle } from './file/save.js';
 import { createRecorder, combineTracks } from './recording/recorder.js';
 
 let displayStream, micStream, mixedAudio, combinedStream;
 let recorder, mimeType, chunks = [];
 let writer = null;
+let writerHandle = null;
+let writerSource = null;
 
 const resetState = () => {
   chunks = [];
@@ -21,30 +25,72 @@ const resetState = () => {
   displayStream = micStream = combinedStream = null;
   mixedAudio = null;
   recorder = null;
+  writer = null;
+  writerHandle = null;
+  writerSource = null;
   UI.recordingState('idle');
 };
 
-async function start() {
+function displayCaptureMissingMessage(status, inspect) {
+  const typeOf = inspect?.typeOf || 'undefined';
+  if (status.inAppBrowser) {
+    return 'This in-app browser cannot capture the screen. Open this page in Chrome (menu → Open in Chrome).';
+  }
+  if (status.ios) {
+    return 'iOS browsers do not support getDisplayMedia screen recording.';
+  }
+  if (status.android) {
+    return `Chrome on this phone has no getDisplayMedia (typeof ${typeOf}). Chrome flags do not expose it on phones — only desktop Chrome and some tablets. A website cannot add that API. Use desktop Chrome, or Android Settings → screen recorder.`;
+  }
+  return `getDisplayMedia is not available in this browser (typeof ${typeOf}).`;
+}
+
+function formatCaughtError(err) {
+  const name = err?.name || 'Error';
+  const message = err?.message || String(err);
+  return `${name}: ${message}`;
+}
+
+async function acquireMicrophone() {
+  const devices = navigator.mediaDevices || navigator.mediaDevice;
+  if (!devices?.getUserMedia) {
+    return null;
+  }
+
   try {
-    UI.setBusy(true);
-    UI.setMsg('Preparing…');
-    UI.hideDownload(); // Hide any existing download
-
-    const fr = parseInt(UI.fpsSel.value, 10) || 60;
-
-    // 1) Screen/window/tab (user picks; tick "Share audio" to include system audio)
-    displayStream = await navigator.mediaDevices.getDisplayMedia({
-      video: { frameRate: fr },
-      audio: UI.sysAudio.checked
-    });
-
-    // 2) Mic
-    micStream = await navigator.mediaDevices.getUserMedia({
+    return await devices.getUserMedia({
       audio: {
         deviceId: UI.micSel.value ? { exact: UI.micSel.value } : undefined,
         echoCancellation: true, noiseSuppression: true, autoGainControl: true
       }
     });
+  } catch (err) {
+    // Screen-only recording is still useful, especially on Android.
+    UI.setMsg('Microphone unavailable. Continuing with screen audio only (if any).');
+    return null;
+  }
+}
+
+async function start() {
+  try {
+    UI.setBusy(true);
+    UI.setMsg('Preparing…');
+    UI.hideDownload();
+
+    const android = isAndroid();
+    const fr = parseInt(UI.fpsSel.value, 10) || (android ? 30 : 60);
+
+    // Call getDisplayMedia on this tap. Do not feature-detect-and-bail first:
+    // Chrome Android may only expose the method under a user gesture, and
+    // extra pre-checks were blocking the system picker entirely.
+    displayStream = await captureDisplayMedia({
+      frameRate: fr,
+      systemAudio: !android && UI.sysAudio.checked,
+      android
+    });
+
+    // 2) Mic (optional — do not abort screen capture if it fails)
+    micStream = await acquireMicrophone();
 
     // 3) Mix audio and combine with video
     mixedAudio = createAudioMixer(displayStream, micStream);
@@ -52,21 +98,25 @@ async function start() {
     UI.preview.srcObject = combinedStream;
 
     // 4) Recorder + optional live file writer
+    writer = null;
+    writerHandle = null;
+    writerSource = null;
+
     if (UI.liveSave.checked) {
-      UI.setMsg('Opening file picker for live save...');
-      const { writer: fw, error } = await maybeOpenWriter(UI.liveSave.checked, `capture-${Date.now()}.webm`);
-      
-      if (error) {
-        // If live save fails, disable the checkbox and show error
+      UI.setMsg('Opening file for live save...');
+      const opened = await maybeOpenWriter(true, `capture-${Date.now()}.webm`);
+
+      if (opened.error) {
         UI.liveSave.checked = false;
-        UI.setMsg(`Live save failed: ${error}. Recording to memory instead.`);
-        writer = null;
+        UI.setMsg(`Live save failed: ${opened.error}. Recording to memory instead.`);
       } else {
-        writer = fw;
-        UI.setMsg('Live save enabled. File picker opened successfully.');
+        writer = opened.writer;
+        writerHandle = opened.handle;
+        writerSource = opened.source;
+        UI.setMsg(opened.source === 'opfs'
+          ? 'Live save enabled in browser storage. You can download or share when finished.'
+          : 'Live save enabled. File picker opened successfully.');
       }
-    } else {
-      writer = null;
     }
 
     const { rec, mimeType: mt } = createRecorder(combinedStream, {
@@ -80,11 +130,13 @@ async function start() {
       if (writer) {
         try {
           await writer.write(e.data);
-        } catch (error) {
-          // If writing fails, disable live save and fall back to memory
+        } catch {
           UI.liveSave.checked = false;
           UI.setMsg('Live save failed during recording. Saving to memory instead.');
           writer = null;
+          writerHandle = null;
+          writerSource = null;
+          chunks.push(e.data);
         }
       } else {
         chunks.push(e.data);
@@ -93,53 +145,60 @@ async function start() {
 
     recorder.onstop = async () => {
       try {
-        if (writer) {
+        if (writer && writerSource === 'picker') {
           await closeWriter(writer);
           UI.setMsg('Recording saved directly to file.');
-          // Reset state after successful file save
           resetState();
           UI.setBusy(false);
-        } else {
-          // Create blob and download link for memory recording
+          return;
+        }
+
+        let blob = null;
+        if (writer && writerSource === 'opfs') {
+          await closeWriter(writer);
+          const file = await fileFromHandle(writerHandle);
+          blob = file || null;
+        }
+
+        if (!blob) {
           if (chunks.length === 0) {
             UI.setMsg('No recording data available.');
             resetState();
             UI.setBusy(false);
             return;
           }
-          
-          const blob = new Blob(chunks, { type: mimeType });
-          
-          if (blob.size === 0) {
-            UI.setMsg('Recording is empty. Please try again.');
-            resetState();
-            UI.setBusy(false);
-            return;
-          }
-
-          const url = URL.createObjectURL(blob);
-          const filename = `capture-${Date.now()}.webm`;
-          const fileSize = `${Math.round(blob.size / 1024 / 1024 * 100) / 100} MB`;
-          
-          // Show download button BEFORE setting busy to false
-          UI.showDownload(url, filename, fileSize);
-          UI.setMsg(`Recording complete! Click the download button below.`);
-          
-          // Don't reset state here - keep the download link available
-          // Reset only the recording-related state, not the UI
-          [displayStream, micStream, combinedStream].forEach(s => {
-            if (s) s.getTracks().forEach(t => t.stop());
-          });
-          if (mixedAudio?.ctx) mixedAudio.stop();
-          
-          displayStream = micStream = combinedStream = null;
-          mixedAudio = null;
-          recorder = null;
-          UI.recordingState('idle');
-          
-          // Set busy to false AFTER showing download (this won't hide it now)
-          UI.setBusy(false);
+          blob = new Blob(chunks, { type: mimeType });
         }
+
+        if (!blob.size) {
+          UI.setMsg('Recording is empty. Please try again.');
+          resetState();
+          UI.setBusy(false);
+          return;
+        }
+
+        const url = URL.createObjectURL(blob);
+        const filename = blob.name || `capture-${Date.now()}.webm`;
+        const fileSize = `${Math.round(blob.size / 1024 / 1024 * 100) / 100} MB`;
+
+        UI.showDownload(url, filename, fileSize, blob);
+        UI.setMsg(writerSource === 'opfs'
+          ? 'Recording complete. Download or share it from the button below.'
+          : 'Recording complete! Click the download button below.');
+
+        [displayStream, micStream, combinedStream].forEach(s => {
+          if (s) s.getTracks().forEach(t => t.stop());
+        });
+        if (mixedAudio?.ctx) mixedAudio.stop();
+
+        displayStream = micStream = combinedStream = null;
+        mixedAudio = null;
+        recorder = null;
+        writer = null;
+        writerHandle = null;
+        writerSource = null;
+        UI.recordingState('idle');
+        UI.setBusy(false);
       } catch (e) {
         UI.setMsg('Save failed: ' + (e?.message || e));
         resetState();
@@ -149,28 +208,29 @@ async function start() {
 
     recorder.start(250);
     UI.recordingState('recording');
-    UI.setMsg(writer ? 'Recording and saving directly to file…' : 'Recording to memory…');
+    UI.setMsg(writer
+      ? (writerSource === 'opfs' ? 'Recording to browser storage…' : 'Recording and saving directly to file…')
+      : 'Recording to memory…');
 
-    // If user ends share via browser UI, stop our recorder too
     displayStream.getVideoTracks()[0].addEventListener('ended', () => {
       if (recorder && recorder.state !== 'inactive') recorder.stop();
     });
 
   } catch (err) {
-    // Provide specific error messages
+    const inspect = inspectDisplayCapture();
     let errorMsg = 'Failed to start: ';
-    if (err.name === 'NotAllowedError') {
-      errorMsg += 'Permission denied. Please allow camera/microphone access and try again.';
+    if (err.code === 'DISPLAY_MEDIA_MISSING') {
+      errorMsg = displayCaptureMissingMessage(getDisplayCaptureStatus(), inspect);
+    } else if (err.name === 'NotAllowedError') {
+      errorMsg += 'Permission denied. Allow screen (and microphone) access and try again.';
     } else if (err.name === 'NotFoundError') {
-      errorMsg += 'No camera/microphone found. Please check your devices.';
-    } else if (err.name === 'NotSupportedError') {
-      errorMsg += 'This feature is not supported in your browser.';
-    } else if (err.name === 'SecurityError') {
-      errorMsg += 'Security error. Try accessing via https://localhost:8000';
+      errorMsg += 'No capture source found. On Android, pick a screen or app in the system prompt.';
+    } else if (err.name === 'InvalidStateError') {
+      errorMsg += 'Screen capture must start from a tap on Start. Tap Start again and pick a screen or app.';
     } else {
-      errorMsg += err?.message || err;
+      errorMsg += formatCaughtError(err);
     }
-    
+
     UI.setMsg(errorMsg);
     resetState();
     UI.setBusy(false);
@@ -200,7 +260,6 @@ function stop() {
   }
 }
 
-// Add a function to clear download when starting a new recording
 function clearDownload() {
   const downloadLink = UI.downloadA;
   if (downloadLink.href && downloadLink.href.startsWith('blob:')) {
@@ -209,26 +268,63 @@ function clearDownload() {
   UI.hideDownload();
 }
 
+function applyPlatformDefaults() {
+  const android = isAndroid();
+  if (android) {
+    UI.sysAudio.checked = false;
+    UI.sysAudio.disabled = true;
+    UI.sysAudio.parentElement.title = 'System audio capture is not available in Chrome on Android.';
+    UI.fpsSel.value = '30';
+  }
+
+  UI.updateCaptureStatus(getDisplayCaptureStatus());
+}
+
 (async function init() {
   UI.featureReport.textContent = formatFeatureReport();
-  
+  applyPlatformDefaults();
+
   try {
     await populateMics(UI.micSel);
-  } catch (error) {
+  } catch {
     UI.micSel.innerHTML = '<option value="">Error loading microphones</option>';
   }
 
-  // Check File System Access API support and update UI with detailed status
-  const fsStatus = getFSStatus();
-  UI.updateLiveSaveStatus(fsStatus);
+  UI.updateLiveSaveStatus(getFSStatus());
+
+  document.querySelectorAll('a[href="#setup-guides"]').forEach(a => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      UI.highlightGuide('setup-guides');
+    });
+  });
 
   UI.startBtn.addEventListener('click', () => {
-    clearDownload(); // Clear any existing download before starting new recording
+    clearDownload();
     start();
   });
   UI.pauseBtn.addEventListener('click', pause);
   UI.resumeBtn.addEventListener('click', resume);
   UI.stopBtn.addEventListener('click', stop);
+
+  UI.shareBtn?.addEventListener('click', async () => {
+    const blob = UI.downloadBlob;
+    if (!blob || typeof navigator.share !== 'function') return;
+    const file = blob instanceof File
+      ? blob
+      : new File([blob], UI.downloadA.download || 'capture.webm', { type: blob.type || 'video/webm' });
+    try {
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) {
+        UI.setMsg('Sharing files is not supported in this browser. Use Download instead.');
+        return;
+      }
+      await navigator.share({ files: [file], title: file.name });
+    } catch (err) {
+      if (err?.name !== 'AbortError') {
+        UI.setMsg('Share failed: ' + (err?.message || err));
+      }
+    }
+  });
 
   UI.setBusy(false);
 })();

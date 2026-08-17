@@ -12,9 +12,10 @@
   <script src="https://unpkg.com/mocha/mocha.js"></script>
   <script>mocha.setup('bdd');</script>
   <script src="https://unpkg.com/chai/chai.js"></script>
-  <script type="module" src="./support.spec.js"></script>
-  <script type="module" src="./recorder.spec.js"></script>
-  <script>
+  <script type="module">
+    import './support.spec.js';
+    import './recorder.spec.js';
+    import './display.spec.js';
     mocha.checkLeaks();
     mocha.run();
   </script>
